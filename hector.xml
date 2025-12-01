@@ -1,0 +1,66 @@
+<mujoco model="pseudo_2D_humanoid">
+  <option gravity="0 0 -9.81"/>
+
+  <default>
+    <geom solimp="0.9 0.95 0.001" solref= "1e-5 1e3"
+          condim="3" friction=".7 .5 0.0001"/>
+  </default>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.5 0.7 0.9" rgb2="0 0 0"
+             width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge"
+             rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+             markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane"
+              texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+
+    <geom name="floor" type="plane" pos="0 0 0" size="5 5 0.1"
+          material="groundplane"
+          solimp="0.9 0.95 0.001" solref="1e-5 1e3"
+          friction=".7 .5 0.0001"/>
+
+    <body name="torso" pos="0 0 0.5850">
+      <geom name = "torso_geom" type="box" size="0.075 0.02 0.125" mass="8" rgba="0.8 0.4 0.2 1"/>
+      <joint type="slide" axis="1 0 0"/>
+      <joint type="slide" axis="0 0 1"/>
+      <joint type="hinge" axis="0 1 0"/>
+
+      <body name="left_thigh" pos="0 0 -0.125">
+        <joint name="left_hip" type="hinge" axis="0 1 0" range="-90 90" damping="0.01"/>
+        <geom name= "left_thigh_geom" type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="0.2 0.6 0.8 1"/>
+
+        <body name="left_shin" pos="0 0 -0.22">
+          <joint name="left_knee" type="hinge" axis="0 1 0" range="0 135" damping="0.01"/>
+          <geom name = 'left_contact' type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="0.3 0.8 0.8 1"/>
+          <body name="left_foot" pos="0 0 -0.24"/>
+        </body>
+      </body>
+
+      <body name="right_thigh" pos="0 0 -0.125">
+        <joint name="right_hip" type="hinge" axis="0 1 0" range="-90 90" damping="0.01"/>
+        <geom name = "right_thigh_geom" type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="0.8 0.3 0.3 1"/>
+
+        <body name="right_shin" pos="0 0 -0.22">
+          <joint name="right_knee" type="hinge" axis="0 1 0" range="0 135" damping="0.01"/>
+          <geom name = "right_contact" type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="1 0.5 0.5 1"/>
+          <body name="right_foot" pos="0 0 -0.24"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor joint="left_hip"  ctrlrange="-100 100" gear="1"/>
+    <motor joint="left_knee" ctrlrange="-100 100" gear="1"/>
+    <motor joint="right_hip" ctrlrange="-100 100" gear="1"/>
+    <motor joint="right_knee" ctrlrange="-100 100" gear="1"/>
+  </actuator>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+</visual>
+</mujoco>
