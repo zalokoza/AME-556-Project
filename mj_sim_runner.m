@@ -140,7 +140,7 @@ while py.mj_sim.is_running()
   
     A = [ 1 0 1 0;
         0 1 0 1;
-        p1z p1x p2z p2x];
+        -p1z p1x -p2z p2x];
     alpha = 1;
 
     % Set up PD for desired dynamics on x, z, and theta
