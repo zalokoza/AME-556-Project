@@ -146,9 +146,9 @@ while py.mj_sim.is_running()
     % Set up PD for desired dynamics on x, z, and theta
     Kp1 = 1; Kp2 = 1; Kp3 = 1; Kd1 = 1; Kd2 = 1; Kd3 = 1;
     xd = 0; zd = .45; thetad = 0;
-    bd = [Kp1*(xd-q(1) + Kd1*(0 - dq(1)));
-        Kp2*(zd-q(2)) + Kd2*(0 - dq(2));
-        Kp3*(thetad-q(3)) + Kd3*(0 - dq(3))];
+    bd = [-Kp1*(xd-q(1)) - Kd1*(0 - dq(1));
+        -Kp2*(zd-q(2)) - Kd2*(0 - dq(2));
+        -Kp3*(thetad-q(3)) - Kd3*(0 - dq(3))];
 
     % Set up b vector i.e. the REAL current forces and torques
     m = py.mujoco.mj_getTotalmass(model);
