@@ -134,9 +134,9 @@ while py.mj_sim.is_running()
 
     %% Step 2: QP Control for Standing
     p1z = q(2) -  left_foot_pos(3); % CoM_y - foot_y
-    p1x = left_foot_pos(1) - q(1); % foot_x - CoM_x
+    p1x = q(1) - left_foot_pos(1); % CoM_x - foot_x 
     p2z = q(2) -  right_foot_pos(3); % CoM_y - foot_y
-    p2x = right_foot_pos(1) - q(1); % foot_x - CoM_x
+    p2x = q(1) - right_foot_pos(1); % CoM_x - foot_x
   
     A = [ 1 0 1 0;
         0 1 0 1;
