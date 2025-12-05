@@ -143,13 +143,6 @@ while py.mj_sim.is_running()
         -p1z p1x -p2z p2x];
     alpha = 1;
 
-    % Set up PD for desired dynamics on x, z, and theta
-    Kp1 = 1; Kp2 = 1; Kp3 = 1; Kd1 = 1; Kd2 = 1; Kd3 = 1;
-    xd = 0; zd = .45; thetad = 0;
-    bd = [-Kp1*(xd-q(1)) - Kd1*(0 - dq(1));
-        -Kp2*(zd-q(2)) - Kd2*(0 - dq(2));
-        -Kp3*(thetad-q(3)) - Kd3*(0 - dq(3))];
-
     % Set up b vector i.e. the REAL current forces and torques
     m = py.mujoco.mj_getTotalmass(model);
     I = .0638; % calculated by hand
@@ -157,20 +150,26 @@ while py.mj_sim.is_running()
         m*ddq(2);
         I*ddq(3);];
 
+    % Set up PD for desired dynamics on x, z, and theta
+    Kp1 = 1; Kp2 = 1; Kp3 = 1; Kd1 = 1; Kd2 = 1; Kd3 = 1;
+    xd = 0; zd = .45; thetad = 0;
+    bd = [m*(-Kp1*(xd-q(1)) - Kd1*(0 - dq(1)));
+        m*(-Kp2*(zd-q(2)) - Kd2*(0 - dq(2))+9.81);
+        I*(-Kp3*(thetad-q(3)) - Kd3*(0 - dq(3)))];
+
+
     % Set up inequality constraints on the contact forces
     mu = .7;
     Aqp = [0 1 0 0;
         0 0 0 1;
         0 -1 0 0;
         0 0 0 -1;
-        0 -1 0 0;
-        0 0 0 -1;
         1 -mu 0 0;
         0 0 1 -mu;
-        -1 mu 0 0; 
-        0 0 -1 mu];
+        -1 -mu 0 0; 
+        0 0 -1 -mu];
         
-    bqp = [250; 250; 250; 250; -10; -10; 0; 0; 0; 0];
+    bqp = [250; 250; -10; -10; 0; 0; 0; 0];
 
         
     
