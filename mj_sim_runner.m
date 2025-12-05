@@ -159,19 +159,26 @@ while py.mj_sim.is_running()
 
     % Set up inequality constraints on the contact forces
     mu = .7;
-    Aqp = [0 1 0 1;
+    Aqp = [0 1 0 0;
+        0 0 0 1;
         0 -1 0 0;
-        0 -1 0 -1;
         0 0 0 -1;
-        1 -mu 1 -mu;
-        -1 -mu -1 -mu];
-    bqp = [250; 0; -10; 0; 0; 0];
+        0 -1 0 0;
+        0 0 0 -1;
+        1 -mu 0 0;
+        0 0 1 -mu;
+        -1 mu 0 0; 
+        0 0 -1 mu];
+        
+    bqp = [250; 250; 250; 250; -10; -10; 0; 0; 0; 0];
+
+        
     
     % Time to do quadratic programming
     H = 2*(A')*A+2*alpha*eye(4);
     ft = -2*bd'*A; 
     f = ft';
-    F = quadprog(H, f, [], [], A, b, [], [], []);
+    F = quadprog(H, f, Aqp, bqp, [], [], [], [], []);
 
     % Force-Torque Mapping
     if k < 100
