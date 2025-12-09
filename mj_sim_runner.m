@@ -134,6 +134,7 @@ F_storage = zeros(10000, 4);
 bd_storage = zeros(10000, 3);
 b_storage = zeros(10000, 3);
 contact_storage = zeros(10000, 1);
+AF_storage = zeros(10000, 3);
 % --- run mujoco_runner ---
 k = 0;
 while py.mj_sim.is_running()
@@ -163,7 +164,7 @@ while py.mj_sim.is_running()
     A = [ 1 0 1 0;
         0 1 0 1;
         -p1z p1x -p2z p2x];
-    alpha = 1;
+    alpha = 0;
 
     % Set up b vector i.e. the REAL current forces and torques
     m = py.mujoco.mj_getTotalmass(model);
@@ -173,8 +174,15 @@ while py.mj_sim.is_running()
         I*ddq(3);];
 
     % Set up PD for desired dynamics on x, z, and theta
-    Kp1 = 1; Kp2 = 1; Kp3 = 100; Kd1 = .1; Kd2 = .1; Kd3 = 10;
-    xd = 0; zd = .45; thetad = 0;
+    Kp1 = 10; Kp2 = 10; Kp3 = 100; Kd1 = 1; Kd2 = 1; Kd3 = 10;
+    xd = 0; zd = .45; thetad = pi/4;
+    if k < 500
+        zd = .45;
+    elseif k < 1000
+        zd = .55;
+    elseif k < 1500
+        zd = .40;
+    end
     bd = [m*(Kp1*(xd-q(1)) + Kd1*(0 - dq(1)));
         m*(Kp2*(zd-q(2)) + Kd2*(0 - dq(2))) + m*9.81;
         I*(Kp3*(thetad-q(3)) + Kd3*(0 - dq(3)))];
@@ -193,19 +201,13 @@ while py.mj_sim.is_running()
         
     bqp = [250; 250; -10; -10; 0; 0; 0; 0];
 
-        
-    
     % Time to do quadratic programming
-    H = 2*(A')*A+2*alpha*eye(4);
-    ft = -2*bd'*A; 
+    S = diag([1, 1, 1]); % For prioritizing x, y, or theta accelerations
+    H = (A')*S*A+2*alpha*eye(4);
+    ft = -.5*((bd')*(S')*A+(bd')*S*A); 
     f = ft';
     F = quadprog(H, f, Aqp, bqp, [], [], [], [], []);
 
-    % Force-Torque Mapping
-    % TODO: Replace these three lines with foot-contact logic i.e. 
-    if k < 100
-        ctrl = [0; 0; 0; 0];
-    else
   %  ctrl = footForcesToTorques(model,data,-F);
     
     %% Step 3.5: Zargai attempt to do Force- Torque Mapping
@@ -220,7 +222,7 @@ while py.mj_sim.is_running()
     jacp_right = double(jacp_right);
     T_right = -jacp_right(:,6:7)'*[F(3), 0, F(4)]'; % Right hip, right knee torque mapping to F2x, F2y
     ctrl = [T_left' T_right']';
-    end
+
     %% Step 3: Set the control and step simulation
     py.mj_sim.set_ctrl(ctrl');
     py.mj_sim.step();
@@ -233,6 +235,7 @@ while py.mj_sim.is_running()
     bd_storage(k,:) = bd;
     b_storage(k,:) = b;
     contact_storage(k) = contact_state;
+    AF_storage(k,:) = (A*F)';
 end
 
 
@@ -245,7 +248,7 @@ F_storage =  F_storage(1:k,:);
 bd_storage = bd_storage(1:k,:);
 b_storage = b_storage(1:k,:);
 contact_storage = contact_storage(1:k);
-
+AF_storage = AF_storage(1:k,:);
 % Plotting
 
 figure;
@@ -264,53 +267,63 @@ xlabel('Step'); ylabel('Torque (Nm)');
 grid on;
 
 figure
-subplot(5,3,1);
+subplot(6,3,1);
 plot(q_storage(:,1));
 ylabel('Torso x');
-subplot(5,3,2);
+subplot(6,3,2);
 plot(q_storage(:,2));
 ylabel('Torso y');
-subplot(5,3,3);
+subplot(6,3,3);
 plot(q_storage(:,3));
 ylabel('Torso theta');
 
-subplot(5,3,4);
+subplot(6,3,4);
 plot(dq_storage(:,1));
 ylabel('Torso dx');
-subplot(5,3,5);
+subplot(6,3,5);
 plot(dq_storage(:,2));
 ylabel('Torso dy');
-subplot(5,3,6);
+subplot(6,3,6);
 plot(dq_storage(:,3));
 ylabel('Torso dtheta');
 
-subplot(5,3,7);
+subplot(6,3,7);
 plot(bd_storage(:,1));
 ylabel('Bd x');
-subplot(5,3,8);
+subplot(6,3,8);
 plot(bd_storage(:,2));
 ylabel('Bd y');
-subplot(5,3,9);
+subplot(6,3,9);
 plot(bd_storage(:,3));
 ylabel('Bd theta');
 
-subplot(5,3,10);
+subplot(6,3,10);
 plot(b_storage(:,1));
 ylabel('B x');
-subplot(5,3,11);
+subplot(6,3,11);
 plot(b_storage(:,2));
 ylabel('B y');
-subplot(5,3,12);
+subplot(6,3,12);
 plot(b_storage(:,3));
 ylabel('B theta');
 
-subplot(5,3,13);
+subplot(6,3,13);
+plot(AF_storage(:,1));
+ylabel('AF x');
+subplot(6,3,14);
+plot(AF_storage(:,2));
+ylabel('AF y');
+subplot(6,3,15);
+plot(AF_storage(:,3));
+ylabel('AF theta');
+
+subplot(6,3,16);
 plot(F_storage(:,1) + F_storage(:,3));
 ylabel('Fx');
-subplot(5,3,14);
+subplot(6,3,17);
 plot(F_storage(:,2) + F_storage(:,4));
 ylabel('Fy');
-subplot(5,3,15);
+subplot(6,3,18);
 plot(contact_storage);
 ylabel('Contact State');
 
