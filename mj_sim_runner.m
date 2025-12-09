@@ -4,7 +4,12 @@ clc
 close all
 
 function tau = footForcesToTorques(model, data, F_des)
-% footForcesToTorques  Map desired foot forces (2D) to joint torques.
+% footForcesToTorques  Map desired foot forces (2D) to joint torques. We
+% use QP or MPC algorithms to calculate the desired foot contact forces
+% in order to achieve specific dynamics for the robot. Then, we use this
+% force-torque-mapping function to calculate which torques need to be
+% applied to which joints in order to instantenously achieve those desired
+% feet (end effector) forces.
 %
 %   tau = footForcesToTorques(model, data, F_des)
 %
@@ -47,8 +52,8 @@ function tau = footForcesToTorques(model, data, F_des)
     % Number of velocity DOFs
     nv = int32(model.nv);
 
-    %--- Helper to get 2x4 planar Jacobian (X,Z) for a given foot body ---
-    function J2D = getFootJacobian2D(body_id)
+    %--- Helper to get 4x4 Jacobian (X,Z forces and Y moment) for a given foot body ---
+    function J_foot = getFootJacobian2D(body_id)
         % Allocate numpy arrays (3 x nv) for translational and rotational Jacobians
         jacp = np.zeros(py.tuple({int32(3), nv}), pyargs('dtype', np.float64));
         jacr = np.zeros(py.tuple({int32(3), nv}), pyargs('dtype', np.float64));
@@ -58,27 +63,34 @@ function tau = footForcesToTorques(model, data, F_des)
 
         % Convert to MATLAB double
         Jp = double(jacp);    % 3 x nv translational J
+        Jr = double(jacr);    % 3 x nv rotational J
 
-        % Extract planar rows: X (row 1) and Z (row 3)
+        % Extract planar rows: X (row 1) and Z (row 3) for forces
+        % Extract Y rotation (row 2) for moment
         % Extract columns for the 4 actuated joints: LH, LK, RH, RK
         % Those are qvel indices 4:7 in MATLAB (1-based).
-        J2D = [Jp(1,4:7);      % X row
-               Jp(3,4:7)];     % Z row    --> 2 x 4
+        % For 2D motion in XZ plane: forces in X,Z and moment about Y axis
+        J_foot = [Jp(1,4:7);      % Fx row (translational X)
+                  Jp(3,4:7);      % Fz row (translational Z)
+                  Jr(2,4:7)];     % My row (rotational Y)    --> 3 x 4
     end
 
-    %--- Compute Jacobians for left and right feet (2 x 4 each) ---
+    %--- Compute Jacobians for left and right feet (3 x 4 each) ---
     J_L = getFootJacobian2D(LEFT_FOOT_ID);   % left foot
     J_R = getFootJacobian2D(RIGHT_FOOT_ID);  % right foot
 
-    %--- Stack into full task Jacobian (4 x 4) ---
-    % task vector is [Fx_L; Fz_L; Fx_R; Fz_R]
+    %--- Stack into full task Jacobian (6 x 4) ---
+    % task vector is [Fx_L; Fz_L; My_L; Fx_R; Fz_R; My_R]
+    % But we only have 4 DOF in actuated joints, so this is overdetermined
+    % Use pseudo-inverse to find best-fit solution
     J = [J_L;
-         J_R];   % 4 x 4
+         J_R];   % 6 x 4
 
     %--- Map desired foot forces to joint torques ---
-    % tau = J' * F  (standard operational-space mapping: tau = J^T * F)
-    F = F_des(:);          % make sure it's a column
-    tau = J.' * F;         % 4x1
+    % tau = J^+ * F  (pseudo-inverse since system is overdetermined)
+    % tau = pinv(J) * F
+    F_full = [F_des(1); F_des(2); 0; F_des(3); F_des(4); 0];  % [Fx_L; Fz_L; 0; Fx_R; Fz_R; 0]
+    tau = pinv(J) * F_full;  % 4x1
 
     % Optional: handle singularities with a tiny damping (uncomment if needed)
     % lambda = 1e-6;
@@ -93,9 +105,9 @@ if count(py.sys.path, scriptFolder) == 0
 end
 
 % Import module into MATLAB
-py.mj_sim.init("C:\Users\Zargai\Documents\AME_556\.venv\hector.xml");
+py.mj_sim.init("C:\Users\Zargai\Documents\AME_556\.venv\AME-556-Project\hector.xml");
 module = py.importlib.import_module('mj_sim');
-
+np = py.importlib.import_module("numpy");
 % Load model & data from your XML file
 model = module.model;
 data  = module.data;
@@ -113,7 +125,8 @@ dq_storage = zeros(10000, 7);
 ddq_storage = zeros(10000, 3); % 3 for 3 Newton's equations
 ctrl_storage = zeros(10000, 4);
 F_storage = zeros(10000, 4);
-
+bd_storage = zeros(10000, 3);
+b_storage = zeros(10000, 3);
 % --- run mujoco_runner ---
 k = 0;
 while py.mj_sim.is_running()
@@ -151,11 +164,11 @@ while py.mj_sim.is_running()
         I*ddq(3);];
 
     % Set up PD for desired dynamics on x, z, and theta
-    Kp1 = 1; Kp2 = 1; Kp3 = 1; Kd1 = 1; Kd2 = 1; Kd3 = 1;
+    Kp1 = 1; Kp2 = 1; Kp3 = 1; Kd1 = .0; Kd2 = .0; Kd3 = .0;
     xd = 0; zd = .45; thetad = 0;
-    bd = [m*(-Kp1*(xd-q(1)) - Kd1*(0 - dq(1)));
-        m*(-Kp2*(zd-q(2)) - Kd2*(0 - dq(2))+9.81);
-        I*(-Kp3*(thetad-q(3)) - Kd3*(0 - dq(3)))];
+    bd = [m*(Kp1*(xd-q(1)) + Kd1*(0 - dq(1)));
+        m*(Kp2*(zd-q(2)) + Kd2*(0 - dq(2))) + m*9.81;
+        I*(Kp3*(thetad-q(3)) + Kd3*(0 - dq(3)))];
 
 
     % Set up inequality constraints on the contact forces
@@ -180,12 +193,25 @@ while py.mj_sim.is_running()
     F = quadprog(H, f, Aqp, bqp, [], [], [], [], []);
 
     % Force-Torque Mapping
+    % TODO: Replace these three lines with foot-contact logic i.e. 
     if k < 100
         ctrl = [0; 0; 0; 0];
     else
-    ctrl = footForcesToTorques(model,data,-F);
+  %  ctrl = footForcesToTorques(model,data,-F);
+    
+    %% Step 3.5: Zargai attempt to do Force- Torque Mapping
+    jacp_left = np.zeros(py.tuple({int32(3), int32(7)}));
+    jacr_left = np.zeros(py.tuple({int32(3), int32(7)}));
+    module.mujoco.mj_jacBody(model, data, jacp_left, jacr_left, int32(4)) % Left Foot Jacobian
+    jacp_left = double(jacp_left);
+    T_left = -jacp_left(:,4:5)'*[F(1), 0, F(2)]'; % Left hip, left knee torque mapping to F1x, F1y
+    jacp_right = np.zeros(py.tuple({int32(3), int32(7)}));
+    jacr_right = np.zeros(py.tuple({int32(3), int32(7)}));
+    module.mujoco.mj_jacBody(model, data, jacp_right, jacr_right, int32(7)) % Right Foot Jacobian
+    jacp_right = double(jacp_right);
+    T_right = -jacp_right(:,6:7)'*[F(3), 0, F(4)]'; % Right hip, right knee torque mapping to F2x, F2y
+    ctrl = [T_left' T_right']';
     end
-
     %% Step 3: Set the control and step simulation
     py.mj_sim.set_ctrl(ctrl');
     py.mj_sim.step();
@@ -195,6 +221,8 @@ while py.mj_sim.is_running()
     dq_storage(k, :) = dq;
     ctrl_storage(k, :) = ctrl;
     F_storage(k,:) = F';
+    bd_storage(k,:) = bd;
+    b_storage(k,:) = b;
 end
 
 
@@ -204,7 +232,8 @@ q_storage = q_storage(1:k,:);
 dq_storage =  dq_storage(1:k,:);
 ctrl_storage =  ctrl_storage(1:k,:);
 F_storage =  F_storage(1:k,:);
-
+bd_storage = bd_storage(1:k,:);
+b_storage = b_storage(1:k,:);
 % Plotting
 
 figure;
@@ -221,5 +250,53 @@ legend('Left Hip', 'Left Knee', 'Right Hip', 'Right Knee');
 title('Control Inputs');
 xlabel('Step'); ylabel('Torque (Nm)');
 grid on;
+
+figure
+subplot(5,3,1);
+plot(q_storage(:,1));
+ylabel('Torso x');
+subplot(5,3,2);
+plot(q_storage(:,2));
+ylabel('Torso y');
+subplot(5,3,3);
+plot(q_storage(:,3));
+ylabel('Torso theta');
+
+subplot(5,3,4);
+plot(dq_storage(:,1));
+ylabel('Torso dx');
+subplot(5,3,5);
+plot(dq_storage(:,2));
+ylabel('Torso dy');
+subplot(5,3,6);
+plot(dq_storage(:,3));
+ylabel('Torso dtheta');
+
+subplot(5,3,7);
+plot(bd_storage(:,1));
+ylabel('Bd x');
+subplot(5,3,8);
+plot(bd_storage(:,2));
+ylabel('Bd y');
+subplot(5,3,9);
+plot(bd_storage(:,3));
+ylabel('Bd theta');
+
+subplot(5,3,10);
+plot(b_storage(:,1));
+ylabel('B x');
+subplot(5,3,11);
+plot(b_storage(:,2));
+ylabel('B y');
+subplot(5,3,12);
+plot(b_storage(:,3));
+ylabel('B theta');
+
+subplot(5,3,13);
+plot(F_storage(:,1) + F_storage(:,3));
+ylabel('Fx');
+subplot(5,3,14);
+plot(F_storage(:,2) + F_storage(:,4));
+ylabel('Fy');
 
 py.mj_sim.close();

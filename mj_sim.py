@@ -17,11 +17,11 @@ def init(xml_path="examples/ball_floot.xml"):
     viewer = mujoco.viewer.launch_passive(model, data)
     start = time.time()
 
-    data.qpos[1] = .585
-    data.qpos[3] = -1.0472
-    data.qpos[4] = 1.5708
-    data.qpos[5] = 0
-    data.qpos[6] = 1.5708
+    data.qpos[1] = .8
+    data.qpos[3] = .3
+    data.qpos[4] = 0
+    data.qpos[5] = -.3
+    data.qpos[6] = 0
     return True
 
 def step():

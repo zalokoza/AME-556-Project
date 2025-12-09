@@ -1,3 +1,10 @@
+<!--
+This is a simple 2D humanoid model for MuJoCo. It consists of a torso, two thighs, and two shins.
+Each leg has two joints: a hip and a knee. The purposee of this model is to develop and test different robotics control algorithms to achieve
+various tasks such as standing, walking, running, and moving over obstacles. We  will primarily be using QP and MPC alogorithms,
+and therefore will need access to the state of the system, Jacobian of the forward kinematics, contact forces, etc. The Mujoco simulation
+is meant to be run through MATLAB using the Python-MATLAB bridge.
+-->
 <mujoco model="pseudo_2D_humanoid">
   <option gravity="0 0 -9.81"/>
 
