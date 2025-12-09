@@ -73,6 +73,100 @@ def set_ctrl(ctrl):
     data.ctrl[:] = ctrl
     return True
 
+def get_mujoco_name_maps(model):
+    """
+    Return two dictionaries mapping names -> IDs:
+        body_name_to_id : { 'body_name': int(id), ... }
+        geom_name_to_id : { 'geom_name': int(id), ... }
+
+    This is handy for resolving names once and then reusing IDs.
+    """
+    body_name_to_id = {}
+    geom_name_to_id = {}
+
+    # Bodies
+    for i in range(model.nbody):
+        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i)
+        if name is not None:
+            body_name_to_id[name] = int(i)
+
+    # Geoms
+    for i in range(model.ngeom):
+        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, i)
+        if name is not None:
+            geom_name_to_id[name] = int(i)
+
+    return {
+        "body_name_to_id": body_name_to_id,
+        "geom_name_to_id": geom_name_to_id,
+    }
+
+
+def foot_contact_state(
+    model,
+    data,
+    left_geom_name="left_contact",
+    right_geom_name="right_contact",
+    floor_geom_name="floor",
+):
+    """
+    Determine which feet are in contact with the ground.
+
+    Returns an int state code:
+        0 : neither foot in contact
+        1 : left foot in contact
+        2 : right foot in contact
+        3 : both feet in contact
+
+    Parameters
+    ----------
+    model : mujoco.MjModel
+    data  : mujoco.MjData
+    left_geom_name  : str, name of left foot contact geom in the MJCF
+    right_geom_name : str, name of right foot contact geom in the MJCF
+    floor_geom_name : str, name of floor geom in the MJCF
+    """
+
+    maps = get_mujoco_name_maps(model)
+    geom_map = maps["geom_name_to_id"]
+
+    try:
+        gid_left = geom_map[left_geom_name]
+        gid_right = geom_map[right_geom_name]
+        gid_floor = geom_map[floor_geom_name]
+    except KeyError as e:
+        raise ValueError(
+            f"Geom name {e.args[0]!r} not found in model. "
+            "Check your MJCF names or arguments to foot_contact_state()."
+        )
+
+    left_contact = False
+    right_contact = False
+
+    # Loop over all active contacts
+    for i in range(data.ncon):
+        con = data.contact[i]
+        g1 = con.geom1
+        g2 = con.geom2
+
+        # Left foot vs floor
+        if ((g1 == gid_left and g2 == gid_floor) or
+            (g2 == gid_left and g1 == gid_floor)):
+            left_contact = True
+
+        # Right foot vs floor
+        if ((g1 == gid_right and g2 == gid_floor) or
+            (g2 == gid_right and g1 == gid_floor)):
+            right_contact = True
+
+    state = 0
+    if left_contact:
+        state += 1
+    if right_contact:
+        state += 2
+
+    return int(state)
+
 if __name__ == "__main__":
     if init("examples/03_two_link_robot.xml"):
         while is_running():

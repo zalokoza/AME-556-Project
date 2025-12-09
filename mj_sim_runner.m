@@ -114,10 +114,16 @@ data  = module.data;
 
 % Hardcode useful body IDs. Add 1 because MATLAB indexing. DOUBLE CHECK THESE IDS
 % IF NEW BODIES ARE CREATED
+% NOTE: NEXT SECTION  CREATES DICTIONARIES FOR GEOM/BODY IDS. USE THAT
+% INSTEAD
 torso_id     = 2 + 1;
 leftfoot_id  = 4 + 1;
 rightfoot_id = 7 + 1;
 
+% Create dictionaries for mapping geom and body names to their IDs
+maps = module.get_mujoco_name_maps(model);
+body_map = maps{'body_name_to_id'};
+geom_map = maps{'geom_name_to_id'};
 % Make a bunch of storage data structures for plotting. Trim them later.
 
 q_storage = zeros(10000, 7);
@@ -127,6 +133,7 @@ ctrl_storage = zeros(10000, 4);
 F_storage = zeros(10000, 4);
 bd_storage = zeros(10000, 3);
 b_storage = zeros(10000, 3);
+contact_storage = zeros(10000, 1);
 % --- run mujoco_runner ---
 k = 0;
 while py.mj_sim.is_running()
@@ -145,6 +152,8 @@ while py.mj_sim.is_running()
     left_foot_vel  = left_foot_vel(4:6);   % linear velocity [vx,vy,vz] of left foot
     right_foot_vel = right_foot_vel(4:6);  % linear velocity [vx,vy,vz] of right foot
 
+    %% Step 1.5: Check Foot Contact
+    contact_state = int32(module.foot_contact_state(model, data));
     %% Step 2: QP Control for Standing
     p1z = q(2) -  left_foot_pos(3); % CoM_y - foot_y
     p1x = q(1) - left_foot_pos(1); % CoM_x - foot_x 
@@ -164,7 +173,7 @@ while py.mj_sim.is_running()
         I*ddq(3);];
 
     % Set up PD for desired dynamics on x, z, and theta
-    Kp1 = 1; Kp2 = 1; Kp3 = 1; Kd1 = .0; Kd2 = .0; Kd3 = .0;
+    Kp1 = 1; Kp2 = 1; Kp3 = 100; Kd1 = .1; Kd2 = .1; Kd3 = 10;
     xd = 0; zd = .45; thetad = 0;
     bd = [m*(Kp1*(xd-q(1)) + Kd1*(0 - dq(1)));
         m*(Kp2*(zd-q(2)) + Kd2*(0 - dq(2))) + m*9.81;
@@ -223,6 +232,7 @@ while py.mj_sim.is_running()
     F_storage(k,:) = F';
     bd_storage(k,:) = bd;
     b_storage(k,:) = b;
+    contact_storage(k) = contact_state;
 end
 
 
@@ -234,6 +244,8 @@ ctrl_storage =  ctrl_storage(1:k,:);
 F_storage =  F_storage(1:k,:);
 bd_storage = bd_storage(1:k,:);
 b_storage = b_storage(1:k,:);
+contact_storage = contact_storage(1:k);
+
 % Plotting
 
 figure;
@@ -298,5 +310,8 @@ ylabel('Fx');
 subplot(5,3,14);
 plot(F_storage(:,2) + F_storage(:,4));
 ylabel('Fy');
+subplot(5,3,15);
+plot(contact_storage);
+ylabel('Contact State');
 
 py.mj_sim.close();
