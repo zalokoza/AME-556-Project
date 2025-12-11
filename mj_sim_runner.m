@@ -10,7 +10,7 @@ if count(py.sys.path, scriptFolder) == 0
 end
 
 % Import module into MATLAB
-py.mj_sim.init("G:\My Drive\Courses\AME 556\Final Project MATLAB\hector.xml");
+py.mj_sim.init("C:\Users\Zargai\Documents\AME_556\.venv\AME-556-Project\AME-556-Project\hector.xml");
 module = py.importlib.import_module('mj_sim');
 np = py.importlib.import_module("numpy");
 % Load model & data from your XML file
@@ -139,16 +139,17 @@ while py.mj_sim.is_running()
     Kp1 = 10; Kp2 = 10; Kp3 = 100; 
     Kd1 = 1; Kd2 = 1; Kd3 = 10;
     xd = 0; zd = .45; thetad = 0;
-    if k < 500
-        zd = .45;
-    elseif k < 1000
-        zd = .55;
-    elseif k < 1500
-        zd = .40;
-    end
-    bd = [m*(Kp1*(xd-q(1)) + Kd1*(0 - dq(1)));
-        m*(Kp2*(zd-q(2)) + Kd2*(0 - dq(2))) + m*9.81;
-        I*(Kp3*(thetad-q(3)) + Kd3*(0 - dq(3)))];
+    vxd = 0; vzd = 0; vtd = 0;
+    % if k < 500
+    %     zd = .45;
+    % elseif k < 1000
+    %     zd = .55;
+    % elseif k < 1500
+    %     zd = .40;
+    % end
+    bd = [m*(Kp1*(xd-q(1)) + Kd1*(vxd - dq(1)));
+        m*(Kp2*(zd-q(2)) + Kd2*(vzd - dq(2))) + m*9.81;
+        I*(Kp3*(thetad-q(3)) + Kd3*(vtd - dq(3)))];
 
 
     % Set up inequality constraints on the contact forces
@@ -170,8 +171,6 @@ while py.mj_sim.is_running()
     ft = -2*bd'*S*A; 
     f = ft';
     F = quadprog(H, f, Aqp, bqp, [], [], [], [], []);
-
-  %  ctrl = footForcesToTorques(model,data,-F);
     
     %% Step 3.5: Zargai attempt to do Force- Torque Mapping
     jacp_left = np.zeros(py.tuple({int32(3), int32(7)}));
@@ -195,12 +194,12 @@ while py.mj_sim.is_running()
             0 1;
             -p2z p2x]; 
 
-        xd = right_foot_pos(1) + 0.1; 
-        zd = 0.45; 
-        thetad = 0; 
-
-        Kp1 = 10; Kp2 = 10; Kp3 = 100; 
-        Kd1 = 1; Kd2 = 1; Kd3 = 10; 
+        %xd = right_foot_pos(1) + 0.1; 
+ 
+        Kp1 = 0; Kp2 = 10; Kp3 = 100; 
+        Kd1 = 10; Kd2 = 1; Kd3 = 10;
+        xd = 0; zd = .45; thetad = 0;
+        vxd = .5; vzd = 0; vtd = 0;
 
         bd = [m*(Kp1*(xd-q(1)) + Kd1*(0 - dq(1)));
         m*(Kp2*(zd-q(2)) + Kd2*(0 - dq(2))) + m*9.81;
@@ -230,26 +229,26 @@ while py.mj_sim.is_running()
         jacp_right = double(jacp_right);
         T_right = -jacp_right(:,6:7)'*[F(1), 0, F(2)]'; % Left hip, left knee torque mapping to F1x, F1y
 
-        s = phase_time/step_duration; 
-
-        target_foot_x = right_foot_pos(1) + step_length; 
-        target_foot_z = step_height*sin(pi*s); 
-
-        rel_x = target_foot_x - q(1); 
-        rel_z = target_foot_z - q(2); 
-
-        [q_hip_des, q_knee_des] = leg_inverse_kinematics(rel_x,rel_z); 
-
-        Kp_swing = 100; 
-        Kd_swing = 10; 
-
-        q_err = [q_hip_des; q_knee_des] - [q(4);q(5)];
-        dq_err = [0; 0] - [dq(4);dq(5)];
-
-        T_left = Kp_swing*q_err+Kd_swing*dq_err; 
-        ctrl = [T_left;T_right]; 
-
-
+        % s = phase_time/step_duration; 
+        % 
+        % target_foot_x = right_foot_pos(1) + step_length; 
+        % target_foot_z = step_height*sin(pi*s); 
+        % 
+        % rel_x = target_foot_x - q(1); 
+        % rel_z = target_foot_z - q(2); 
+        % 
+        % [q_hip_des, q_knee_des] = leg_inverse_kinematics(rel_x,rel_z); 
+        % 
+        % Kp_swing = 100; 
+        % Kd_swing = 10; 
+        % 
+        % q_err = [q_hip_des; q_knee_des] - [q(4);q(5)];
+        % dq_err = [0; 0] - [dq(4);dq(5)];
+        % 
+        % T_left = Kp_swing*q_err+Kd_swing*dq_err; 
+        % ctrl = [T_left;T_right]; 
+        ctrl = [0; 0; T_right];
+        F = [0; 0; F]; % This is just for graphing purposes.
 
         
     else
@@ -298,7 +297,8 @@ while py.mj_sim.is_running()
 
         % F = [0;0;0;0]; 
         % bd = [0;0;0]; 
-        % ctrl = [0;0;0;0]; 
+        ctrl = [T_left;0;0];
+        F = [F; 0; 0]; % This is just for graphing purposes.
 
     end
 
@@ -306,89 +306,89 @@ while py.mj_sim.is_running()
     py.mj_sim.set_ctrl(ctrl');
     py.mj_sim.step();
 
-    % Store the data in the storage arrays
-    % q_storage(k, :) = q;
-    % dq_storage(k, :) = dq;
-    % ctrl_storage(k, :) = ctrl;
-    % F_storage(k,:) = F';
-    % bd_storage(k,:) = bd;
-    % b_storage(k,:) = b;
-    % contact_storage(k) = contact_state;
-    % AF_storage(k,:) = (A*F)';
-    % gait_state_storage(k) = gait_state; 
+    %Store the data in the storage arrays
+    q_storage(k, :) = q;
+    dq_storage(k, :) = dq;
+    ctrl_storage(k, :) = ctrl;
+    F_storage(k,:) = F';
+    bd_storage(k,:) = bd;
+    b_storage(k,:) = b;
+    contact_storage(k) = contact_state;
+    %AF_storage(k,:) = (A*F)';
+    gait_state_storage(k) = gait_state; 
 end
 
 
-% Trim data structures to match the time spent in simulation
-% 
-% q_storage = q_storage(1:k,:);
-% dq_storage =  dq_storage(1:k,:);
-% ctrl_storage =  ctrl_storage(1:k,:);
-% F_storage =  F_storage(1:k,:);
-% bd_storage = bd_storage(1:k,:);
-% b_storage = b_storage(1:k,:);
-% contact_storage = contact_storage(1:k);
-% AF_storage = AF_storage(1:k,:);
-% gait_state_storage = gait_state_storage(1:k); 
-% 
-% % Plotting
-% 
-% figure;
-% subplot(2,1,1);
-% plot(q_storage);
-% legend('x', 'z', 'pitch', 'left_hip', 'left_knee', 'right_hip', 'right_knee');
-% title('Joint Positions');
-% xlabel('Step'); ylabel('Position (rad)');
-% grid on;
-% 
-% subplot(2,1,2);
-% plot(ctrl_storage);
-% legend('Left Hip', 'Left Knee', 'Right Hip', 'Right Knee');
-% title('Control Inputs');
-% xlabel('Step'); ylabel('Torque (Nm)');
-% grid on;
-% 
-% figure
-% subplot(6,3,1);
-% plot(q_storage(:,1));
-% ylabel('Torso x');
-% subplot(6,3,2);
-% plot(q_storage(:,2));
-% ylabel('Torso y');
-% subplot(6,3,3);
-% plot(q_storage(:,3));
-% ylabel('Torso theta');
-% 
-% subplot(6,3,4);
-% plot(dq_storage(:,1));
-% ylabel('Torso dx');
-% subplot(6,3,5);
-% plot(dq_storage(:,2));
-% ylabel('Torso dy');
-% subplot(6,3,6);
-% plot(dq_storage(:,3));
-% ylabel('Torso dtheta');
-% 
-% subplot(6,3,7);
-% plot(bd_storage(:,1));
-% ylabel('Bd x');
-% subplot(6,3,8);
-% plot(bd_storage(:,2));
-% ylabel('Bd y');
-% subplot(6,3,9);
-% plot(bd_storage(:,3));
-% ylabel('Bd theta');
-% 
-% subplot(6,3,10);
-% plot(b_storage(:,1));
-% ylabel('B x');
-% subplot(6,3,11);
-% plot(b_storage(:,2));
-% ylabel('B y');
-% subplot(6,3,12);
-% plot(b_storage(:,3));
-% ylabel('B theta');
-% 
+%Trim data structures to match the time spent in simulation
+
+q_storage = q_storage(1:k,:);
+dq_storage =  dq_storage(1:k,:);
+ctrl_storage =  ctrl_storage(1:k,:);
+F_storage =  F_storage(1:k,:);
+bd_storage = bd_storage(1:k,:);
+b_storage = b_storage(1:k,:);
+contact_storage = contact_storage(1:k);
+%AF_storage = AF_storage(1:k,:);
+gait_state_storage = gait_state_storage(1:k); 
+
+% Plotting
+
+figure;
+subplot(2,1,1);
+plot(q_storage);
+legend('x', 'z', 'pitch', 'left_hip', 'left_knee', 'right_hip', 'right_knee');
+title('Joint Positions');
+xlabel('Step'); ylabel('Position (rad)');
+grid on;
+
+subplot(2,1,2);
+plot(ctrl_storage);
+legend('Left Hip', 'Left Knee', 'Right Hip', 'Right Knee');
+title('Control Inputs');
+xlabel('Step'); ylabel('Torque (Nm)');
+grid on;
+
+figure
+subplot(6,3,1);
+plot(q_storage(:,1));
+ylabel('Torso x');
+subplot(6,3,2);
+plot(q_storage(:,2));
+ylabel('Torso y');
+subplot(6,3,3);
+plot(q_storage(:,3));
+ylabel('Torso theta');
+
+subplot(6,3,4);
+plot(dq_storage(:,1));
+ylabel('Torso dx');
+subplot(6,3,5);
+plot(dq_storage(:,2));
+ylabel('Torso dy');
+subplot(6,3,6);
+plot(dq_storage(:,3));
+ylabel('Torso dtheta');
+
+subplot(6,3,7);
+plot(bd_storage(:,1));
+ylabel('Bd x');
+subplot(6,3,8);
+plot(bd_storage(:,2));
+ylabel('Bd y');
+subplot(6,3,9);
+plot(bd_storage(:,3));
+ylabel('Bd theta');
+
+subplot(6,3,10);
+plot(b_storage(:,1));
+ylabel('B x');
+subplot(6,3,11);
+plot(b_storage(:,2));
+ylabel('B y');
+subplot(6,3,12);
+plot(b_storage(:,3));
+ylabel('B theta');
+
 % subplot(6,3,13);
 % plot(AF_storage(:,1));
 % ylabel('AF x');
@@ -398,26 +398,26 @@ end
 % subplot(6,3,15);
 % plot(AF_storage(:,3));
 % ylabel('AF theta');
-% 
-% subplot(6,3,16);
-% plot(F_storage(:,1) + F_storage(:,3));
-% ylabel('Fx');
-% subplot(6,3,17);
-% plot(F_storage(:,2) + F_storage(:,4));
-% ylabel('Fy');
-% subplot(6,3,18);
-% plot(contact_storage);
-% ylabel('Contact State');
-% 
-% figure; 
-% plot(gait_state_storage, 'LineWidth', 2);
-% ylim([-0.5, 2.5]);
-% yticks([0, 1, 2]);
-% yticklabels({'STANDING', 'LEFT_SUPPORT', 'RIGHT_SUPPORT'});
-% ylabel('Gait State');
-% xlabel('Simulation Step');
-% title('State Machine Transitions');
-% grid on;
+
+subplot(6,3,16);
+plot(F_storage(:,1) + F_storage(:,3));
+ylabel('Fx');
+subplot(6,3,17);
+plot(F_storage(:,2) + F_storage(:,4));
+ylabel('Fy');
+subplot(6,3,18);
+plot(contact_storage);
+ylabel('Contact State');
+
+figure; 
+plot(gait_state_storage, 'LineWidth', 2);
+ylim([-0.5, 2.5]);
+yticks([0, 1, 2]);
+yticklabels({'STANDING', 'LEFT_SUPPORT', 'RIGHT_SUPPORT'});
+ylabel('Gait State');
+xlabel('Simulation Step');
+title('State Machine Transitions');
+grid on;
 
 py.mj_sim.close();
 
