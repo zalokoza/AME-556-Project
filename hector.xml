@@ -37,7 +37,7 @@ is meant to be run through MATLAB using the Python-MATLAB bridge.
       <joint type="slide" axis="0 0 1"/>
       <joint type="hinge" axis="0 1 0"/>
 
-      <body name="left_thigh" pos="0 0 -0.125">
+      <body name="left_thigh" pos="0 0.025 -0.125">
         <joint name="left_hip" type="hinge" axis="0 1 0" range="-90 90" damping="0.01"/>
         <geom name= "left_thigh_geom" type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="0.2 0.6 0.8 1"/>
 
@@ -48,7 +48,7 @@ is meant to be run through MATLAB using the Python-MATLAB bridge.
         </body>
       </body>
 
-      <body name="right_thigh" pos="0 0 -0.125">
+      <body name="right_thigh" pos="0 -0.025 -0.125">
         <joint name="right_hip" type="hinge" axis="0 1 0" range="-90 90" damping="0.01"/>
         <geom name = "right_thigh_geom" type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="0.8 0.3 0.3 1"/>
 
