@@ -10,7 +10,7 @@ if count(py.sys.path, scriptFolder) == 0
 end
 
 % Import module into MATLAB
-py.mj_sim.init("C:\Users\Zargai\Documents\AME_556\.venv\AME-556-Project\AME-556-Project\hector.xml");
+py.mj_sim.init("C:\Users\Zargai\Documents\AME_556\.venv\AME-556-Project\hector.xml");
 module = py.importlib.import_module('mj_sim');
 np = py.importlib.import_module("numpy");
 % Load model & data from your XML file
@@ -51,6 +51,10 @@ step_height = 0.05; % z-direction
 maps = module.get_mujoco_name_maps(model);
 body_map = maps{'body_name_to_id'};
 geom_map = maps{'geom_name_to_id'};
+% Pull feet ID's
+left_foot_id = double(body_map{'left_foot'}) + 1;
+right_foot_id = double(body_map{'right_foot'}) + 1;
+
 % Make a bunch of storage data structures for plotting. Trim them later.
 
 
@@ -67,6 +71,10 @@ AF_storage = zeros(10000, 3);
 gait_state_storage = zeros(10000,1); 
 % --- run mujoco_runner ---
 k = 0;
+
+right = repmat([0,1],250, 1); % Right foot on ground for .5s
+left = repmat([1,0],250, 1); % Left foot on ground for .5s
+contact_schedule = repmat([right;left],8,1); % Right, left, right, left... for 8s
 
 while py.mj_sim.is_running()
     k = k + 1;
@@ -106,7 +114,7 @@ while py.mj_sim.is_running()
     cvel = double(data.cvel);
     left_foot_pos = xpos(leftfoot_id,  :);    % [x,y,z] world position of left foot
     right_foot_pos = xpos(rightfoot_id,  :);   % [x,y,z] world position of right foot
-    left_foot_vel  = cvel(leftfoot_id,  :);    
+    left_foot_vel  = cvel(leftfoot_id,  :);     
     right_foot_vel = cvel(rightfoot_id,  :);   
 
     left_foot_vel  = left_foot_vel(4:6);   % linear velocity [vx,vy,vz] of left foot
