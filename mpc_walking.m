@@ -39,20 +39,31 @@ contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for
 k = 1;
 %% Step 2: Main Loop
 
-% TO DO: Need leg swinging controller to calculate swinging leg torques
-
 while py.mj_sim.is_running()
     if mod(k-1,10) == 0
         x_mpc = data_extracter(data, body_map, 'mpc_state'); % Generate the MPC-style state vector
         moments = data_extracter(data, body_map, 'moment_arms'); % Get moment arms from CoM to feet
         p1x = moments(1); p1z = moments(2); p2x = moments(3); p2z = moments(4);
-        F = horizon(model, x_mpc, contact_schedule, k, p1x, p1z, p2x, p2z n); % MPC function. Horizon = 20, discretization = 10*dt
-        ctrl = force_torque_mapping(module, data, F);
-        py.mj_sim.set_ctrl(ctrl);
+        x_qp = horizon(model, x_mpc, contact_schedule, k, p1x, p1z, p2x, p2z); % MPC function. Horizon = 20, discretization = 10*dt
+        F_mpc = x_qp(8:11)' ; % Extract U(k) from entire Xqp
+        % Determine contact foot based on schedule
+        if contact_schedule(k,1) == 0
+            contact_foot = 'right';
+        elseif contact_schedule(k,1) == 1
+            contact_foot = 'left';
+        end
+        F_swing = swing_controller(model, data, body_map, contact_schedule, k);
+        if strcmp(contact_foot, 'right')
+            F = [F_swing F_mpc(3:4)];
+        elseif strcmp(contact_foot, 'left')
+            F = [F_mpc(1:2) F_swing];
+        end
+        ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
+        py.mj_sim.set_ctrl(ctrl');
         py.mj_sim.step();
         k = k + 1;
     else
-        py.mj_sim.set_ctrl(ctrl);
+        py.mj_sim.set_ctrl(ctrl');
         py.mj_sim.step();
         k = k + 1;
     end
