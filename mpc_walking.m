@@ -35,7 +35,8 @@ right_foot_id = double(body_map{'right_foot'}) + 1;
 % Define Contact Schedule
 right = repmat([0,1], .5/dt , 1); % Right foot on ground for .5s
 left = repmat([1,0], .5/dt , 1); % Left foot on ground for .5s
-contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for 8s
+%contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for 8s
+contact_schedule = ones(4000,2); % Standing schedule
 k = 1;
 %% Step 2: Main Loop
 
@@ -47,18 +48,19 @@ while py.mj_sim.is_running()
         x_qp = horizon(model, x_mpc, contact_schedule, k, p1x, p1z, p2x, p2z); % MPC function. Horizon = 20, discretization = 10*dt
         F_mpc = x_qp(8:11)' ; % Extract U(k) from entire Xqp
         % Determine contact foot based on schedule
-        if contact_schedule(k,1) == 0
+        if contact_schedule(k,1) == 0 && contact_schedule(k,2) == 1
             contact_foot = 'right';
-        elseif contact_schedule(k,1) == 1
-            contact_foot = 'left';
-        end
-        F_swing = swing_controller(model, data, body_map, contact_schedule, k);
-        if strcmp(contact_foot, 'right')
+            F_swing = swing_controller(model, data, body_map, contact_schedule, k);
             F = [F_swing F_mpc(3:4)];
-        elseif strcmp(contact_foot, 'left')
+            ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
+        elseif contact_schedule(k,1) == 1 && contact_schedule(k, 2) == 0
+            contact_foot = 'left';
+            F_swing = swing_controller(model, data, body_map, contact_schedule, k);
             F = [F_mpc(1:2) F_swing];
+            ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
+        elseif contact_schedule(k,1) == 1 && contact_schedule(k,2) == 1
+            ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F_mpc);
         end
-        ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
         py.mj_sim.set_ctrl(ctrl');
         py.mj_sim.step();
         k = k + 1;
