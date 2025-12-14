@@ -35,9 +35,15 @@ right_foot_id = double(body_map{'right_foot'}) + 1;
 % Define Contact Schedule
 right = repmat([0,1], .5/dt , 1); % Right foot on ground for .5s
 left = repmat([1,0], .5/dt , 1); % Left foot on ground for .5s
-%contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for 8s
+contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for 8s
 contact_schedule = ones(4000,2); % Standing schedule
 k = 1;
+
+%% Plotting set up
+x_mpc_storage = zeros(10000,7);
+F_storage =  zeros(10000,4);
+T_storage = zeros(10000, 4);
+
 %% Step 2: Main Loop
 
 while py.mj_sim.is_running()
@@ -46,7 +52,7 @@ while py.mj_sim.is_running()
         moments = data_extracter(data, body_map, 'moment_arms'); % Get moment arms from CoM to feet
         p1x = moments(1); p1z = moments(2); p2x = moments(3); p2z = moments(4);
         x_qp = horizon(model, x_mpc, contact_schedule, k, p1x, p1z, p2x, p2z); % MPC function. Horizon = 20, discretization = 10*dt
-        F_mpc = x_qp(8:11)' ; % Extract U(k) from entire Xqp
+        F_mpc = x_qp(141:144)' ; % Extract U(k) from entire Xqp
         % Determine contact foot based on schedule
         if contact_schedule(k,1) == 0 && contact_schedule(k,2) == 1
             contact_foot = 'right';
@@ -59,16 +65,37 @@ while py.mj_sim.is_running()
             F = [F_mpc(1:2) F_swing];
             ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
         elseif contact_schedule(k,1) == 1 && contact_schedule(k,2) == 1
-            ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F_mpc);
+            F = F_mpc
+            ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
         end
         py.mj_sim.set_ctrl(ctrl');
         py.mj_sim.step();
         k = k + 1;
+        x_mpc_storage(k,:) = x_mpc;
+        F_storage(k,:) = F;
+        T_storage(k,:) = ctrl';
     else
         py.mj_sim.set_ctrl(ctrl');
         py.mj_sim.step();
         k = k + 1;
     end
 end
+
+
+%% Trim Arrays
+
+x_mpc_storage = x_mpc_storage(1:k,:);
+F_storage = F_storage(1:k,:);
+T_storage = T_storage(1:k,:);
+
+subplot(3,1,1);
+plot(x_mpc_storage);
+ylabel('State');
+subplot(3,1,2);
+plot(F_storage);
+ylabel('F');
+subplot(3,1,3);
+plot(T_storage);
+ylabel('T');
 
 py.mj_sim.close();
