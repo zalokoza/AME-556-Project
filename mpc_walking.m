@@ -35,8 +35,11 @@ right_foot_id = double(body_map{'right_foot'}) + 1;
 % Define Contact Schedule
 right = repmat([0,1], .5/dt , 1); % Right foot on ground for .5s
 left = repmat([1,0], .5/dt , 1); % Left foot on ground for .5s
-contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for 8s
-contact_schedule = ones(4000,2); % Standing schedule
+standing = repmat([1,1], .5/dt, 1); % Both feet contacted for .5s
+%contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for 8s
+%contact_schedule = ones(4000,2); % Standing schedule
+contact_schedule = repmat([standing; right; standing; left;], 8, 1);
+
 k = 1;
 
 %% Plotting set up
@@ -57,15 +60,15 @@ while py.mj_sim.is_running()
         if contact_schedule(k,1) == 0 && contact_schedule(k,2) == 1
             contact_foot = 'right';
             F_swing = swing_controller(model, data, body_map, contact_schedule, k);
-            F = [F_swing F_mpc(3:4)];
-            ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
+            F = [F_swing F_mpc(3:4)]
+            ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F)
         elseif contact_schedule(k,1) == 1 && contact_schedule(k, 2) == 0
             contact_foot = 'left';
             F_swing = swing_controller(model, data, body_map, contact_schedule, k);
             F = [F_mpc(1:2) F_swing];
             ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
         elseif contact_schedule(k,1) == 1 && contact_schedule(k,2) == 1
-            F = F_mpc
+            F = F_mpc;
             ctrl = force_torque_mapping(module, model, left_foot_id, right_foot_id, np, data, F);
         end
         py.mj_sim.set_ctrl(ctrl');
@@ -94,8 +97,9 @@ ylabel('State');
 subplot(3,1,2);
 plot(F_storage);
 ylabel('F');
+legend()
 subplot(3,1,3);
 plot(T_storage);
 ylabel('T');
-
+legend()
 py.mj_sim.close();

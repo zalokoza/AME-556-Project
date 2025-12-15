@@ -33,10 +33,10 @@ elseif strcmp(desired_data, 'left_foot_velocity')
     cvel = double(data.cvel);
     data = cvel(left_foot_id,  :);
 elseif strcmp(desired_data, 'moment_arms')
-    p1z = q(2) -  left_foot_pos(3); % CoM_y - foot_y
-    p1x = q(1) - left_foot_pos(1); % CoM_x - foot_x 
-    p2z = q(2) -  right_foot_pos(3); % CoM_y - foot_y
-    p2x = q(1) - right_foot_pos(1); % CoM_x - foot_x
+    p1z = -q(2) +  left_foot_pos(3); 
+    p1x = -q(1) + left_foot_pos(1);
+    p2z = -q(2) +  right_foot_pos(3);
+    p2x = -q(1) + right_foot_pos(1);
     data = [p1x, p1z, p2x, p2z];
 else
     error('Invalid desired_data input');
