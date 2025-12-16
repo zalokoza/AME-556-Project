@@ -12,7 +12,7 @@ Ac = [0 0 0 1 0 0 0;
     0 0 0 0 1 0 0;
     0 0 0 0 0 1 0;
     0 0 0 0 0 0 0;
-    0 0 0 0 0 0 1;
+    0 0 0 0 0 0 -1;
     0 0 0 0 0 0 0;
     0 0 0 0 0 0 0 ];
 Ad = Ac*.02 + eye(7);
@@ -29,6 +29,7 @@ B_horizon = cell(20,1);
 %     Bd = Bc*.02;
 %     B_horizon{i} = Bd;
 % end
+
 for i = 1:length(alphas) % hopefully 1:20
     Bc = [0 0 0 0;
         0 0 0 0;
@@ -41,6 +42,7 @@ for i = 1:length(alphas) % hopefully 1:20
     %Bd(3,:) = Bd(3,:) - [.003627, 0, .003627, 0]; % c2d gives THIS for the discrete B matrix...
     B_horizon{i} = Bd;
 end
+
 %% Calculate Torso Trajectories Now
 % vxd = 0;
 % x_traj = zeros(1,20);
