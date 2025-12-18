@@ -11,7 +11,7 @@ elseif joint_vel(1) < -30 || joint_vel(1) > 30 || joint_vel(3) < - 30 || joint_v
     status = 0;
     display(joint_vel)
     error('Hip rotating too fast')
-elseif joint_pos(2) < -.1 || joint_pos(2) > 160 || joint_pos(4) < -.1 || joint_pos(4) > 160 % -.1 because -0.0000 would throw an error
+elseif joint_pos(2) < -.5 || joint_pos(2) > 160 || joint_pos(4) < -.5 || joint_pos(4) > 160 % -.5 degrees because '-0.0000' would throw an error
     status = 0;
     display(joint_pos);
     error ('Knee joint angle limit exceeded')

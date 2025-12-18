@@ -5,13 +5,13 @@ left_foot_pos = data_extracter(data, body_map, 'left_foot_location');
 right_foot_pos = data_extracter(data, body_map, 'right_foot_location');
 left_foot_velocity = data_extracter(data, body_map, 'left_foot_velocity');
 gait_length = .25*.50; % .5 seconds to complete the step. .5 m/s. should travel .125m in that time
-Kd1 = 7; Kd2 = 7; % Kd1 is gain for the hip joint, Kd2 is gain for the knee
+Kd1 = 8; Kd2 = 8; % Kd1 is gain for the hip joint, Kd2 is gain for the knee
 
 if alpha(1) == 0
-    desired_position = right_foot_pos(1) + .25 %gait_length;
+    desired_position = right_foot_pos(1) + .4 %gait_length;
     F = -[Kd1 Kd2]*(desired_position(1)-left_foot_pos(1));
 elseif alpha(1) == 1
-    desired_position = left_foot_pos(1) + .25 %gait_length;
+    desired_position = left_foot_pos(1) + .4 %gait_length;
     F = -[Kd1 Kd2]*(desired_position(1)-left_foot_pos(1));
 end
 %error('wee')
