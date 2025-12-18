@@ -4,17 +4,17 @@ function x_mpc = horizon(model, x, contact_schedule, k, p1x, p1z, p2x, p2z)
 
 m = 9;
 I = .0638;
-Fmin = 10;
+Fmin = 0;
 Fmax = 300;
 mu = .7;
 alphas = contact_schedule(k:10:k+190,:); % Extract the 20 horizons out of 200 contact_schedule
-Ac = [0 0 0 1 0 0 0; % x
-    0 0 0 0 1 0 0; % y
-    0 0 0 0 0 1 0; % theta
-    0 0 0 0 0 0 0; % x
-    0 0 0 0 0 0 -1; % y
-    0 0 0 0 0 0 0; % theta
-    0 0 0 0 0 0 0 ]; % g
+Ac = [0 0 0 1 0 0 0;
+    0 0 0 0 1 0 0;
+    0 0 0 0 0 1 0;
+    0 0 0 0 0 0 0;
+    0 0 0 0 0 0 -1;
+    0 0 0 0 0 0 0;
+    0 0 0 0 0 0 0 ];
 Ad = Ac*.02 + eye(7);
 
 B_horizon = cell(20,1);
@@ -43,30 +43,6 @@ for i = 1:length(alphas) % hopefully 1:20
     B_horizon{i} = Bd;
 end
 
-% Build Ap and Bp now (these are NOT the inequality matrices)
-
-N = 20;
-n = size(Ad,1);
-m = size(B_horizon{1},2);
-
-M = zeros(N*n, N*m);
-
-for j = 1:N
-    Apow = eye(n);                 % Apow = Ad^(i-j)
-    for i = j:N
-        rows = (i-1)*n + (1:n);
-        cols = (j-1)*m + (1:m);
-        M(rows, cols) = Apow * B_horizon{j};
-        Apow = Ad * Apow;          % next power
-    end
-end
-Bp = M;
-Ap = cell(20,1);
-for i = 1:20
-    Ap{i} = Ad^i;
-end
-Ap = cell2mat(Ap);
-
 %% Calculate Torso Trajectories Now
 vxd = 0;
 x_traj = zeros(1,20);
@@ -77,27 +53,38 @@ yd_traj = zeros(1,20);
 thetad_traj = zeros(1,20); 
 g_traj = 9.81*ones(1,20);
 x_traj = [x_traj; y_traj; theta_traj; xd_traj; yd_traj; thetad_traj; g_traj];
-x_ref = x_traj(:);
 
-vxd = .5;
-x_traj = x(1)*ones(1,20)+linspace(.2,4,20)*x(4);
-y_traj = .55*ones(1,20);
-theta_traj = zeros(1,20);
-xd_traj = linspace(x(4),vxd,20);
-yd_traj = zeros(1,20);
-thetad_traj = zeros(1,20); 
-g_traj = 9.81*ones(1,20);
-x_traj = [x_traj; y_traj; theta_traj; xd_traj; yd_traj; thetad_traj; g_traj];
-x_ref = x_traj(:);
+% vxd = .5;
+% x_traj = x(1)*ones(1,20)+linspace(.2,4,20)*x(4);
+% y_traj = .55*ones(1,20);
+% theta_traj = zeros(1,20);
+% xd_traj = linspace(x(4),vxd,20);
+% yd_traj = zeros(1,20);
+% thetad_traj = zeros(1,20); 
+% g_traj = 9.81*ones(1,20);
+% x_traj = [x_traj; y_traj; theta_traj; xd_traj; yd_traj; thetad_traj; g_traj];
 
 %% h and f' Now
-Q = diag([1, 1, 1, 1, 1, 1, 1]);
-R =  diag([.0001, .0001, .0001, .0001]);
-L = blkdiag(Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q);
-K = blkdiag(R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R);
-h = 2*Bp'*L*Bp+K;
-ft = 2*x'*Ap'*L*Bp - x_ref'*L*Bp;
+Q = diag([1, 4, 1, 1, 1, 1, 0]);
+R =  diag([.5, .5, .5, .5]);
+h = 2*blkdiag(Q, Q, Q, Q, Q, Q, Q, Q, Q ,Q ,Q ,Q ,Q, Q, Q, Q, Q, Q, Q, Q, ...
+    R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R);
+ft = [];
+for i = 1:length(alphas)
+    ft = -2*[ft, x_traj(:,i)'*Q];
+end
+ft = [ft, zeros(1,80)];
 f = ft';
+
+%% Aeq and beq Now
+
+I20 = eye(20);              
+E20 = diag(ones(19,1), -1); 
+Aeq_left = kron(I20, eye(7)) + kron(E20, -Ad);
+C = cellfun(@(X) -X, B_horizon, 'UniformOutput', false);
+Aeq_right = blkdiag(C{:});
+Aeq = [Aeq_left Aeq_right];
+beq = [Ad*x;zeros(133,1)];
 
 %% Inequalities Aqp bqp now
 Aqp = [];
@@ -144,9 +131,10 @@ for i = 1:length(alphas) % hopefully 1:20
 end
 Aqp = blkdiag(Aqp_k{1}, Aqp_k{2}, Aqp_k{3}, Aqp_k{4}, Aqp_k{5}, Aqp_k{6}, Aqp_k{7}, Aqp_k{8}, Aqp_k{9}, Aqp_k{10}, ...
     Aqp_k{11}, Aqp_k{12}, Aqp_k{13}, Aqp_k{14}, Aqp_k{15}, Aqp_k{16}, Aqp_k{17}, Aqp_k{18}, Aqp_k{19}, Aqp_k{20});
+Aqp = [zeros(160,140), Aqp];
 %% Finally call the QP function
-%error('wee')
-x_mpc = quadprog(h, f, Aqp, bqp);
+error('wee')
+x_mpc = quadprog(h, f, Aqp, bqp, Aeq, beq);
 % [ineqs,eqs,ncalls] = deletionfilter(Aqp,bqp,Aeq,beq,[],[]);
 % Aeq(find(eqs), :) = 0;
 % beq(find(eqs), :) = 0;
