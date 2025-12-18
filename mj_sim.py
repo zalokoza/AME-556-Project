@@ -18,9 +18,9 @@ def init(xml_path="examples/ball_floot.xml"):
     start = time.time()
     data.qpos[1] = .572
     data.qpos[3] = .3
-    data.qpos[4] = 0.5 # to avoid -0.00001 angle, throwing joint error
+    data.qpos[4] = 0.0 # to avoid -0.00001 angle, throwing joint error
     data.qpos[5] = -.3
-    data.qpos[6] = 0.5# to avoid -0.00001 angle, throwing joint error
+    data.qpos[6] = 0.0# to avoid -0.00001 angle, throwing joint error
     return True
 
 def step():
