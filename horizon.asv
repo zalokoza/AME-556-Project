@@ -100,57 +100,55 @@ ft = 2*x'*Ap'*L*Bp - x_ref'*L*Bp;
 f = ft';
 
 %% Inequalities Constraints Aqp bqp. These are essentially friction pyramid and Fmin < Fy < Fmax constraints
-% Aqp = [];
-% bqp = [];
-% Aqp_k = cell(1,20);
-% for i = 1:length(alphas) % hopefully 1:20
-%     % if alphas(i,1) == 0 && alphas(i, 2) == 1
-%     %     Ai_right = [1 0 0 0;
-%     %         -1 0 0 0;
-%     %         0 1 0 0;
-%     %         0 -1 0 0;
-%     %         0 0 0 1;
-%     %         0 0 0 -1;
-%     %         0 0 1 -mu;
-%     %         0 0 -1 -mu];
-%     %     bi = [0; 0; 0; 0; Fmax; -Fmin; 0; 0]; % First four are saying F1 = 0 or F2 = 0. Can relax those a little bit. Next 2 is saying Fmin < Fy < Fmax. Last two are friction constraints.
-%     %     bqp = [bqp; bi];
-%     % 
-%     % elseif alphas(i,1) == 1 && alphas(i,2) == 0
-%     %     Ai_right = [0 0 1 0;
-%     %         0 0 -1 0;
-%     %         0 0 0 1;
-%     %         0 0 0 -1;
-%     %         0 1 0 0;
-%     %         0 -1 0 0;
-%     %         1 -mu 0 0;
-%     %         -1 -mu 0 0;];
-%     %     bi = [0; 0; 0; 0; Fmax; -Fmin; 0; 0]; % First four are saying F1 = 0 or F2 = 0. Can relax those a little bit. Next 2 is saying Fmin < Fy < Fmax. Last two are friction constraints.
-%     %     bqp = [bqp; bi];
-%     % 
-%     % elseif alphas(i,1) == 1 && alphas(i,2) == 1
-%     Ai_right = [0 -1 0 0;
-%         0 0 0 -1;
-%         0 1 0 0;
-%         0 0 0 1;
-%         1 -mu 0 0;
-%         -1 -mu 0 0;
-%         0 0 1 -mu;
-%         0 0 -1 -mu];
-%     bi = [-Fmin; -Fmin; Fmax; Fmax; 0; 0; 0; 0];
-%     bqp = [bqp; bi];
-%     Aqp_k{i}= [Ai_right];
-% end
-% Aqp = blkdiag(Aqp_k{1}, Aqp_k{2}, Aqp_k{3}, Aqp_k{4}, Aqp_k{5}, Aqp_k{6}, Aqp_k{7}, Aqp_k{8}, Aqp_k{9}, Aqp_k{10}, ...
-%     Aqp_k{11}, Aqp_k{12}, Aqp_k{13}, Aqp_k{14}, Aqp_k{15}, Aqp_k{16}, Aqp_k{17}, Aqp_k{18}, Aqp_k{19}, Aqp_k{20});
+Aqp = [];
+bqp = [];
+Aqp_k = cell(1,20);
+for i = 1:length(alphas) % hopefully 1:20
+    % if alphas(i,1) == 0 && alphas(i, 2) == 1
+    %     Ai_right = [1 0 0 0;
+    %         -1 0 0 0;
+    %         0 1 0 0;
+    %         0 -1 0 0;
+    %         0 0 0 1;
+    %         0 0 0 -1;
+    %         0 0 1 -mu;
+    %         0 0 -1 -mu];
+    %     bi = [0; 0; 0; 0; Fmax; -Fmin; 0; 0]; % First four are saying F1 = 0 or F2 = 0. Can relax those a little bit. Next 2 is saying Fmin < Fy < Fmax. Last two are friction constraints.
+    %     bqp = [bqp; bi];
+    % 
+    % elseif alphas(i,1) == 1 && alphas(i,2) == 0
+    %     Ai_right = [0 0 1 0;
+    %         0 0 -1 0;
+    %         0 0 0 1;
+    %         0 0 0 -1;
+    %         0 1 0 0;
+    %         0 -1 0 0;
+    %         1 -mu 0 0;
+    %         -1 -mu 0 0;];
+    %     bi = [0; 0; 0; 0; Fmax; -Fmin; 0; 0]; % First four are saying F1 = 0 or F2 = 0. Can relax those a little bit. Next 2 is saying Fmin < Fy < Fmax. Last two are friction constraints.
+    %     bqp = [bqp; bi];
+    % 
+    % elseif alphas(i,1) == 1 && alphas(i,2) == 1
+    Ai_right = [0 -1 0 0;
+        0 0 0 -1;
+        0 1 0 0;
+        0 0 0 1;
+        1 -mu 0 0;
+        -1 -mu 0 0;
+        0 0 1 -mu;
+        0 0 -1 -mu];
+    bi = [-Fmin; -Fmin; Fmax; Fmax; 0; 0; 0; 0];
+    bqp = [bqp; bi];
+    Aqp_k{i}= [Ai_right];
+end
+Aqp = blkdiag(Aqp_k{1}, Aqp_k{2}, Aqp_k{3}, Aqp_k{4}, Aqp_k{5}, Aqp_k{6}, Aqp_k{7}, Aqp_k{8}, Aqp_k{9}, Aqp_k{10}, ...
+    Aqp_k{11}, Aqp_k{12}, Aqp_k{13}, Aqp_k{14}, Aqp_k{15}, Aqp_k{16}, Aqp_k{17}, Aqp_k{18}, Aqp_k{19}, Aqp_k{20});
 
 %% Equality constraints. This is telling the MPC to not make any contact forces for the swing foot.
 
-Aeq = [];
+Aeq = []; % In case the entire horizon is double contact, we can pass [] to quadprog()
 beq = [];
-Aqp = [];
-bqp = [];
-
+Aeq_k = {};
 for i = 1:length(alphas) % hopefully 1:20
     if alphas(i,1) == 0 && alphas(i, 2) == 1
         % Define equality constraints for this time step for the left foot
@@ -193,21 +191,13 @@ for i = 1:length(alphas) % hopefully 1:20
         bqp = [bqp; bi];
 
     elseif alphas(i,1) == 1 && alphas(i,2) == 1
-        % Define inequality constraints for this time step for the right
-        % foot and left foot
-        tok = zeros(8,80);
-        tok(:, 4*i-3: 4*i) = [0 -1 0 0;
-            0 0 0 -1;
-            0 1 0 0;
-            0 0 0 1;
-            1 -mu 0 0;
-            -1 -mu 0 0;
-            0 0 1 -mu;
-            0 0 -1 -mu];
-        Aqp = [Aqp; tok];
-        bi = [-Fmin; -Fmin; Fmax; Fmax; 0; 0; 0; 0];
-        bqp = [bqp; bi];
+        Ai_right = [0 0 0 0;
+            0 0 0 0];
+        bi = [0; 0]; % 0 = 0
+        beq = [beq; bi];
+        Aeq_k{i}= [Ai_right];
     end
+    Aeq = blkdiag(Aeq_k{:});
 end
 
 %% Finally call the QP function

@@ -20,7 +20,7 @@ np = py.importlib.import_module("numpy");
 model = module.model;
 data  = module.data;
 
-% Define dt from MuJoCo
+% Define dt from MuJoCo. This is 1/freq of the simulation.
 dt = double(model.opt.timestep); 
 
 % Create dictionaries for mapping geom and body names to their IDs
@@ -28,7 +28,7 @@ maps = module.get_mujoco_name_maps(model);
 body_map = maps{'body_name_to_id'};
 geom_map = maps{'geom_name_to_id'};
 
-% Pull feet ID's
+% Pull feet ID's. Add 1 for use in MATLAB context (indexing starts at 1)
 left_foot_id = double(body_map{'left_foot'}) + 1;
 right_foot_id = double(body_map{'right_foot'}) + 1;
 
@@ -39,7 +39,6 @@ standing = repmat([1,1 ], .5/dt, 1); % Both feet contacted for .5s
 %contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for 8s
 %contact_schedule = ones(4000,2); % Standing schedule
 contact_schedule = repmat([standing; right; standing; left;], 8, 1);
-
 % Joint motor saturation limits
 lo_vec = [-30; -60; -30; -60];
 hi_vec = [30; 60; 30; 60];

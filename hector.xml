@@ -42,7 +42,7 @@ is meant to be run through MATLAB using the Python-MATLAB bridge.
         <geom name= "left_thigh_geom" type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="0.2 0.6 0.8 1"/>
 
         <body name="left_shin" pos="0 0 -0.22">
-          <joint name="left_knee" type="hinge" axis="0 1 0" range="0 135" damping="0.01"/>
+          <joint name="left_knee" type="hinge" axis="0 1 0" limited="true" range="1 135" damping="0.01"/>
           <geom name = 'left_contact' type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="0.3 0.8 0.8 1"/>
           <body name="left_foot" pos="0 0 -0.24"/>
         </body>
@@ -53,7 +53,7 @@ is meant to be run through MATLAB using the Python-MATLAB bridge.
         <geom name = "right_thigh_geom" type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="0.8 0.3 0.3 1"/>
 
         <body name="right_shin" pos="0 0 -0.22">
-          <joint name="right_knee" type="hinge" axis="0 1 0" range="0 135" damping="0.01"/>
+          <joint name="right_knee" type="hinge" axis="0 1 0" limited="true" range="1 135" damping="0.01"/>
           <geom name = "right_contact" type="capsule" size="0.02 0.11" pos="0 0 -0.11" mass="0.25" rgba="1 0.5 0.5 1"/>
           <body name="right_foot" pos="0 0 -0.24"/>
         </body>
