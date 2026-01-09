@@ -37,8 +37,8 @@ right = repmat([0,1], .5/dt/2 , 1); % Right foot on ground for .5s
 left = repmat([1,0], .5/dt/2 , 1); % Left foot on ground for .5s
 standing = repmat([1,1 ], .5/dt, 1); % Both feet contacted for .5s
 %contact_schedule = repmat([right;left], 8, 1); % Right, left, right, left... for 8s
-%contact_schedule = ones(4000,2); % Standing schedule
-contact_schedule = repmat([standing; right; standing; left;], 8, 1);
+contact_schedule = ones(4000,2); % Standing schedule
+%contact_schedule = repmat([standing; right; standing; left;], 8, 1);
 % Joint motor saturation limits
 lo_vec = [-30; -60; -30; -60];
 hi_vec = [30; 60; 30; 60];

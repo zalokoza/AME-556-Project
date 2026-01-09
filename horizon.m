@@ -71,7 +71,7 @@ Ap = cell2mat(Ap);
 vxd = 0;
 x_traj = zeros(1,20);
 y_traj = .45*ones(1,20);
-theta_traj = zeros(1,20);
+theta_traj = ones(1,20)*10/180*pi;
 xd_traj = zeros(1,20);
 yd_traj = zeros(1,20);
 thetad_traj = zeros(1,20); 
@@ -91,12 +91,12 @@ x_ref = x_traj(:);
 % x_ref = x_traj(:);
 
 %% h and f' Now
-Q = diag([1, 1, 1, 1, 1, 1, 1]);
+Q = diag([1, 10, 3, 1, 1, 1, 0]);
 R =  diag([.0001, .0001, .0001, .0001]);
 L = blkdiag(Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q);
 K = blkdiag(R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R);
 h = 2*Bp'*L*Bp+K;
-ft = 2*x'*Ap'*L*Bp - x_ref'*L*Bp;
+ft = 2*x'*Ap'*L*Bp - 2*x_ref'*L*Bp;
 f = ft';
 
 %% Inequalities Constraints Aqp bqp. These are essentially friction pyramid and Fmin < Fy < Fmax constraints
@@ -144,7 +144,7 @@ f = ft';
 % Aqp = blkdiag(Aqp_k{1}, Aqp_k{2}, Aqp_k{3}, Aqp_k{4}, Aqp_k{5}, Aqp_k{6}, Aqp_k{7}, Aqp_k{8}, Aqp_k{9}, Aqp_k{10}, ...
 %     Aqp_k{11}, Aqp_k{12}, Aqp_k{13}, Aqp_k{14}, Aqp_k{15}, Aqp_k{16}, Aqp_k{17}, Aqp_k{18}, Aqp_k{19}, Aqp_k{20});
 
-%% Equality constraints. This is telling the MPC to not make any contact forces for the swing foot.
+%% Equality and inequality constraints. This is telling the MPC to not make any contact forces for the swing foot, and to respect friction in x and max/min in y.
 
 Aeq = [];
 beq = [];
