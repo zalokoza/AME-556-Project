@@ -68,30 +68,30 @@ end
 Ap = cell2mat(Ap);
 
 %% Calculate Torso Trajectories Now
-vxd = 0;
-x_traj = zeros(1,20);
-y_traj = .45*ones(1,20);
-theta_traj = ones(1,20)*10/180*pi;
-xd_traj = zeros(1,20);
-yd_traj = zeros(1,20);
-thetad_traj = zeros(1,20); 
-g_traj = 9.81*ones(1,20);
-x_traj = [x_traj; y_traj; theta_traj; xd_traj; yd_traj; thetad_traj; g_traj];
-x_ref = x_traj(:);
-
-% vxd = .5;
-% x_traj = x(1)*ones(1,20)+linspace(.2,4,20)*x(4);
-% y_traj = .55*ones(1,20);
-% theta_traj = zeros(1,20);
-% xd_traj = linspace(x(4),vxd,20);
+% vxd = 0;
+% x_traj = zeros(1,20);
+% y_traj = .45*ones(1,20);
+% theta_traj = ones(1,20)*10/180*pi;
+% xd_traj = zeros(1,20);
 % yd_traj = zeros(1,20);
 % thetad_traj = zeros(1,20); 
 % g_traj = 9.81*ones(1,20);
 % x_traj = [x_traj; y_traj; theta_traj; xd_traj; yd_traj; thetad_traj; g_traj];
 % x_ref = x_traj(:);
 
+vxd = .5;
+x_traj = x(1)*ones(1,20)+linspace(.2,4,20)*x(4);
+y_traj = .55*ones(1,20);
+theta_traj = zeros(1,20);
+xd_traj = linspace(x(4),vxd,20);
+yd_traj = zeros(1,20);
+thetad_traj = zeros(1,20); 
+g_traj = 9.81*ones(1,20);
+x_traj = [x_traj; y_traj; theta_traj; xd_traj; yd_traj; thetad_traj; g_traj];
+x_ref = x_traj(:);
+
 %% h and f' Now
-Q = diag([1, 10, 3, 1, 1, 1, 0]);
+Q = diag([1, 4, 3, 4, 1, 1, 0]);
 R =  diag([.0001, .0001, .0001, .0001]);
 L = blkdiag(Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q, Q);
 K = blkdiag(R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R);

@@ -38,6 +38,12 @@ elseif strcmp(desired_data, 'moment_arms')
     p2z = -q(2) +  right_foot_pos(3);
     p2x = -q(1) + right_foot_pos(1);
     data = [p1x, p1z, p2x, p2z];
+elseif strcmp(desired_data, 'swing')
+    p1z = left_foot_pos(3); 
+    p1x = -q(1) + left_foot_pos(1);
+    p2z = right_foot_pos(3);
+    p2x = -q(1) + right_foot_pos(1);
+    data = [p1x, p1z, p2x, p2z];
 else
     error('Invalid desired_data input');
 end

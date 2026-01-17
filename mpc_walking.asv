@@ -51,8 +51,11 @@ contact_schedule = contact_scheduler(dict, dt);
 lo_vec = [-30; -60; -30; -60];
 hi_vec = [30; 60; 30; 60];
 k = 1;
-l = 1;
-
+if k = 1
+    l = 1;
+elseif contact_schedule(k-1, :) ~= contact_schedule(k, :)
+    l = 1;
+end
 
 %% Plotting set up
 x_mpc_storage = zeros(10000,7);
@@ -90,15 +93,7 @@ while py.mj_sim.is_running()
         F_storage(k,:) = F;
         T_storage(k,:) = ctrl';
         k = k + 1;
-        % The following loop is counting how far we are into a gait phase.
-        if k == 1
-            l = 1;
-        elseif contact_schedule(k-1, :) ~= contact_schedule(k, :)
-            l = 1;
-        else
-            l = l + 1;
-        end
-end
+        l = l + 1;
         physical_constraints(data, body_map) % Check if physical constraints are violated or not
     else
         x_mpc_storage(k,:) = x_mpc;
